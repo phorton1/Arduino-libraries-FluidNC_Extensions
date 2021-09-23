@@ -6,7 +6,7 @@
 #pragma once
 
 #include <SPIFFS.h>
-#include "Configuration/RuntimeSetting.h"
+#include <Configuration/RuntimeSetting.h>	// FluidNC
 
 #define DEBUG_YAML_OVERRIDES    		1
 
@@ -227,7 +227,7 @@ void loadYamlOverrides()
 			const char *yaml_value;
 			while (yaml_value = getYamlLine(f))
 			{
-				Configuration::RuntimeSetting rts(yaml_buf, yaml_value, NULL);
+				Configuration::RuntimeSetting rts(yaml_buf, yaml_value, allClients);
 				config->group(rts);
 
 				// the runtime setting already set the value into the tree,
