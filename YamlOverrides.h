@@ -2,11 +2,12 @@
 //
 // By including this H file in the main machie INO file,
 // the ability to store Yaml Overrides (persistent runtime configuration)
-// is added to the program.
+// is added to the program via overrides of WEAK_LINKs in FluidNC
+
 #pragma once
 
 #include <SPIFFS.h>
-
+#include "FluidDebug.h"
 #include <Configuration/RuntimeSetting.h>	// FluidNC
 
 
