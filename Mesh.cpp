@@ -22,7 +22,6 @@
 #include "FluidDebug.h"
 
 #include <GCode.h>                              // FluidNC
-// #include <Logging.h>                            // FluidNC
 #include <MotionControl.h>                      // FluidNC
 #include <Protocol.h>                           // FluidNC
 #include <Report.h>                             // FluidNC
@@ -46,6 +45,7 @@
 #define Z_AXIS_MASK  0x04
 #define Y_AXIS_MASK  0x02
 
+
 #define DEFAULT_MESH_HEIGHT         80        // mm
 #define DEFAULT_MESH_WIDTH          125       // mm
 #define DEFAULT_MESH_X_STEPS        6         // every 25mm
@@ -54,12 +54,27 @@
 #define DEFAULT_MESH_Z_MAX_TRAVEL   -35.0     // mm in negative direction from absolute 0,0
 #define DEFAULT_MESH_Z_FEED_RATE    20.0      // mm per min
 #define DEFAULT_LINE_SEG_LENGTH     2         // mm
+#define DEFAULT_NUM_PROBES          1         // count
+
+
+#define MESH_DATA_FILE  "/mesh_data.txt"
+
+#define USE_MESH_TASK  0
+
+#if USE_MESH_TASK
+	void meshTask(void* pvParameters)
+	{
+
+		((Mesh *)pvParameters)->doMeshLeveling();
+	}
+#endif
 
 
 Mesh::Mesh()
 {
     m_is_valid = 0;
     m_in_leveling = 0;
+	m_cur_step = 0;
 
 	_height			    = DEFAULT_MESH_HEIGHT;
 	_width			    = DEFAULT_MESH_WIDTH;
@@ -82,6 +97,14 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
 	handler.item("max_travel",  _z_max_travel);
 	handler.item("feed_rate",   _z_feed_rate);
     handler.item("line_seg_len",_line_seg_length);
+	handler.item("num_probes",   m_num_probes);
+	if (m_num_probes > 4)
+		m_num_probes = 4;
+	if (m_num_probes < 1)
+		m_num_probes = 1;
+
+
+	// possibly invalidate the mesh upon certain changes
 
     if (m_is_valid && handler.handlerType() == Configuration::HandlerType::Runtime)
     {
@@ -97,17 +120,51 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
             readMesh();
         }
     }
+
+
+	// MESH COMMANDS
+	// a weird way to add $commands
+
+	if (handler.handlerType() == Configuration::HandlerType::Runtime)
+	{
+		Configuration::RuntimeSetting &rth = static_cast<Configuration::RuntimeSetting &>(handler);
+		if (rth.is("show"))
+		{
+			debug_mesh();
+			rth.isHandled_ = true;
+		}
+		else if (rth.is("clear"))
+		{
+			invalidateMesh();
+			rth.isHandled_ = true;
+			//int command_result = 237;
+			//handler.item("blah", command_result);
+		}
+		else if (rth.is("do_level"))
+		{
+			#if USE_MESH_TASK
+				xTaskCreatePinnedToCore(
+					meshTask,		// method
+					"meshTask",	    // name
+					4096,			// stack_size
+					this,			// parameters
+					1,  			// priority
+					NULL,			// returned handle
+					0);				// core 1=main FluidNC thread/task, 0=my UI and other tasks
+			#else
+				doMeshLeveling();
+			#endif
+			rth.isHandled_ = true;
+		}
+	}
+
 }
+
 
 
 //--------------------------------------------
 // retrieval API
 //--------------------------------------------
-
-bool Mesh::isValid()
-{
-    return m_is_valid;
-}
 
 
 float Mesh::getZOffset(float mx, float my)
@@ -231,7 +288,7 @@ float Mesh::getZOffset(float mx, float my)
 
 void Mesh::debug_mesh()
 {
-    #if DEBUG_MESH
+    // #if DEBUG_MESH
         g_debug("MESH: m_zero_point == %6.3f",m_zero_point);
         for (int y=_y_steps-1; y>=0; y--)
         {
@@ -243,7 +300,7 @@ void Mesh::debug_mesh()
             }
             g_debug(buf);
         }
-    #endif
+    // #endif
 }
 
 
@@ -284,7 +341,7 @@ static bool _mesh_execute(char *buf)
     if (rslt != Error::Ok)
     {
         report_status_message(rslt, allClients);
-        g_error("MESH: gc_execute_line failed");
+        g_error("MESH: gc_execute_line(%s) failed",buf);
         return false;
     }
     protocol_buffer_synchronize();
@@ -359,14 +416,17 @@ bool Mesh::probeOne(int x, int y, float *zResult)
 
     // do upto N probes with heuristics to throw out bad values
 
-    #define NUM_PROBES   4
 
     bool ok = true;
     int probe_num = 0;
-    float probe_values[NUM_PROBES];
+    float probe_values[m_num_probes];
 
-    while (ok && probe_num < NUM_PROBES)
+    while (ok && probe_num < m_num_probes)
     {
+		protocol_execute_realtime();
+		if (sys.abort)
+			return false;
+
         float value = 0;
         Error rslt = gc_execute_line(buf, Uart0);
         if (rslt == Error::Ok)
@@ -383,25 +443,31 @@ bool Mesh::probeOne(int x, int y, float *zResult)
             report_status_message(rslt, allClients);
             g_error("MESH: probeOne() gc_execute_line failed");
         }
+
+		protocol_execute_realtime();
+		if (sys.abort)
+			return false;
+
         zPullOff(value);
     }
 
     float value = 0;
     if (ok)
     {
-        for (int i=0; i<NUM_PROBES; i++)
+        for (int i=0; i<m_num_probes; i++)
             value += probe_values[i];
-        value /= ((float)NUM_PROBES);
+        value /= ((float)m_num_probes);
 
         #if DEBUG_MESH > 1
             g_debug("MESH[%d,%d] average=%f",x,y,value);
         #endif
 
-        #if NUM_PROBES >= 3
+		if (m_num_probes >= 3)
+		{
             // throw out the extreme value
             int max_idx = -1;
             float max_delta = -1;
-            for (int i=0; i<NUM_PROBES; i++)
+            for (int i=0; i<m_num_probes; i++)
             {
                 float delta = abs(value-probe_values[i]);
                 if (delta > max_delta)
@@ -416,17 +482,17 @@ bool Mesh::probeOne(int x, int y, float *zResult)
             #endif
 
             value = 0;
-            for (int i=0; i<NUM_PROBES; i++)
+            for (int i=0; i<m_num_probes; i++)
             {
                 if (i != max_idx)
                     value += probe_values[i];
             }
-            value /= ((float)NUM_PROBES-1);
+            value /= ((float)m_num_probes-1);
 
             #if DEBUG_MESH
                 g_debug("MESH[%d,%d] FINAL AVERAGE=%f",x,y,value);
             #endif
-        #endif
+		}
     }
 
     *zResult = value;
@@ -437,6 +503,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
 bool Mesh::doMeshLeveling()
 {
     m_in_leveling = true;
+	m_cur_step = 0;
 
     init_mesh();
 
@@ -449,7 +516,9 @@ bool Mesh::doMeshLeveling()
         m_in_leveling = false;
         return false;
     }
-    sys.state = State::Idle;        // turn of "homing" flag!!
+
+	sys.state = State::Idle;
+	config->_stepping->beginLowLatency();
 
     m_mesh_x = steps_to_mpos(motor_steps[X_AXIS],X_AXIS);
     m_mesh_y = steps_to_mpos(motor_steps[Y_AXIS],Y_AXIS);
@@ -466,6 +535,10 @@ bool Mesh::doMeshLeveling()
 
         for (int x=start; x!=end; x+=inc)
         {
+			protocol_execute_realtime();
+			if (sys.abort)
+				return false;
+
             if (_moveTo(m_mesh_x + x*m_dx, m_mesh_y + y*m_dy))
             {
                 float value = 0.0;
@@ -503,30 +576,56 @@ bool Mesh::doMeshLeveling()
                 return false;
             }
 
+			m_cur_step++;
+
         }   // for x_steps
     }   // for y_steps
 
-    _moveTo(m_mesh_x,m_mesh_y);
+	config->_stepping->endLowLatency();
 
-    #if DEBUG_MESH
-        g_debug("MESH: doMeshLeveling() succeeded!");
+	protocol_execute_realtime();
+	if (sys.abort)
+		return false;
+
+	#if DEBUG_MESH
+	    debug_mesh();
     #endif
 
-    debug_mesh();
-    if (writeMesh())
+	// move to the original (given) x y position and
+	// z_pulloff above the determined position
+
+    char buf[50];
+    sprintf(buf,"g0 g53 x%5.3f y%5.3f z%5.3f",m_mesh_x,m_mesh_y,m_zero_point + _z_pulloff);
+	bool ok = _mesh_execute(buf);
+
+	Stepper::go_idle();         // Set steppers to the settings idle state before returning.
+	sys.state = State::Idle;    // Set to IDLE when complete.
+
+	protocol_execute_realtime();
+	if (sys.abort)
+		return false;
+
+    if (ok && writeMesh())
     {
-        m_is_valid = true;
+		// set the z-zero position from the mesh pulloff position
+
+		sprintf(buf,"g10 L20 z%5.3f",_z_pulloff);
+		m_is_valid = _mesh_execute(buf);
     }
 
     m_in_leveling = false;
-    return true;
+
+	#if DEBUG_MESH
+		g_debug("MESH: doMeshLeveling() %s",m_is_valid?"succeeded!":"failed");
+	#endif
+
+    return m_is_valid;
 }
 
 
 //--------------------------------------------
-// Override WEAK_LINK user_defined_homing()
+// Data File
 //--------------------------------------------
-#define MESH_DATA_FILE  "/mesh_data.txt"
 
 void Mesh::invalidateMesh()
 {
@@ -633,8 +732,8 @@ void Mesh::readMesh()
                     {
                         #if DEBUG_MESH
                             g_debug("readMesh() VALID!!");
+	                        debug_mesh();
                         #endif
-                        debug_mesh();
                         m_is_valid = true;
                     }
                 }
@@ -725,34 +824,36 @@ bool Mesh::writeMesh()
 
 
 
-bool mesh_user_defined_homing(Mesh *mesh, AxisMask axisMask)
-{
-    // $HZ builds the mesh
-    // $HY invalidates the mesh
+#if MESH_USER_DEFINED_HOMING
+	bool Mesh::user_defined_homing(AxisMask axisMask)
+	{
+		// $HZ builds the mesh
+		// $HY invalidates the mesh
 
-    if (axisMask == Y_AXIS_MASK)
-    {
-        g_debug("user_defined_homing Y calling invalidateMesh()");
-        mesh->invalidateMesh();
-        return true;
-    }
+		if (axisMask == Y_AXIS_MASK)
+		{
+			g_debug("Mesh::user_defined_homing Y calling invalidateMesh()");
+			invalidateMesh();
+			return true;
+		}
 
-    if (axisMask == Z_AXIS_MASK)
-    {
-        g_debug("user_defined_homing Z calling doMeshLeveling()");
-        mesh->doMeshLeveling();
-        return true;
-    }
+		if (axisMask == Z_AXIS_MASK)
+		{
+			g_debug("Mesh::user_defined_homing Z calling doMeshLeveling()");
+			doMeshLeveling();
+			return true;
+		}
 
-    return false;
-}
+		return false;
+	}
+#endif
 
 
 //======================================================================
 // implement "kinematics" to shoehorn the mesh into FluidNC
 //======================================================================
 
-bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_data, float* position)
+bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* position)
     // THE REALTIME Z IS POSITIVE TO MOVE THE HEAD UP and NEGATIVE to move the head DOWN
     // my cut depth was 0.2 and I ended up setting the realtimeZOffset to 0.15, making
     // my effective cut depth 0.05 .. and that was still deep, but you have to account
@@ -771,7 +872,7 @@ bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_da
     // if the mesh is not valid, just call a single mc_line()
     // for the entire traversal
 
-    if (!mesh->isValid() ||
+    if (!m_is_valid ||
         sys.state == State::Homing)
     {
         memcpy(new_pos,target,3 * sizeof(float));
@@ -808,8 +909,7 @@ bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_da
 	if (!pl_data->motion.rapidMotion && (xdist!=0 || ydist!=0))
 	{
 		float dist = sqrt(xdist*xdist + ydist*ydist + zdist*zdist);
-		float line_seg_len = mesh->getLineSegLength();
-		float f_num_segs = (dist + (line_seg_len/2))/line_seg_len;
+		float f_num_segs = (dist + (_line_seg_length/2))/_line_seg_length;
 		num_segs = f_num_segs;
 		if (!num_segs) num_segs = 1;
 	}
@@ -848,7 +948,7 @@ bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_da
         // get the zOffset at the work position
         // and add it to the working copy
 
-        float zoff = mesh->getZOffset(new_pos[X_AXIS],new_pos[Y_AXIS]);
+        float zoff = getZOffset(new_pos[X_AXIS],new_pos[Y_AXIS]);
         tpos[Z_AXIS] += zoff;
 
         // to see values in Arduino plotter:
@@ -877,7 +977,7 @@ bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_da
 // motors_to_cartesian
 //--------------------------------------------------------------------------------------------------------
 
-void mesh_motors_to_cartesian(Mesh *mesh, float* cartesian, float* motors, int n_axis)
+void Mesh::motors_to_cartesian(float* cartesian, float* motors, int n_axis)
     // the input variable "motors" is "machine position"
     // the output variable is "cartesian"
 {
@@ -890,14 +990,14 @@ void mesh_motors_to_cartesian(Mesh *mesh, float* cartesian, float* motors, int n
 
     // if the mesh is not valid, just return the input
 
-    if (!mesh->isValid() ||
+    if (!m_is_valid ||
         sys.state == State::Homing)
         return;
 
     // get the zOffset at the location
     // and subtract it from the z location
 
-    float zoff = mesh->getZOffset(motors[X_AXIS],motors[Y_AXIS]);
+    float zoff = getZOffset(motors[X_AXIS],motors[Y_AXIS]);
 
     #if DEBUG_VFORWARD
         g_debug("M2C(%5.3f,%5.3f,%5.3f) subtracting z_offset(%5.3f)",

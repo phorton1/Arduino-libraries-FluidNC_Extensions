@@ -3,7 +3,14 @@
 // at a small cost in code and stack space
 
 #include <Arduino.h>
-#include <Logging.h>	// FluidNC
+#include <Logging.h>		// FluidNC
+#include <System.h>			// FluidNC
+#include <GCode.h>          // FluidNC
+#include <Protocol.h>       // FluidNC
+#include <Report.h>         // FluidNC
+#include <Uart.h>			// FluidNC
+
+#define DEBUG_EXECUTE  1
 
 
 void g_debug(const char *format, ...)
@@ -34,4 +41,36 @@ void g_error(const char *format, ...)
 	vsprintf(display_buffer,format,var);
 	log_error(display_buffer);
 	va_end(var);
+}
+
+
+
+bool FluidNC_execute(char *buf)
+{
+	#if DEBUG_EXECUTE
+		g_debug("FluidNC_execute(%s)",buf);
+	#endif
+
+	Error rslt = gc_execute_line(buf, allClients);
+
+	#if DEBUG_EXECUTE > 1
+		g_debug("FluidNC_execute rslt=%d",rslt);
+	#endif
+
+	if (rslt != Error::Ok)
+	{
+		report_status_message(rslt, allClients);
+		g_error("FluidNC_execute: gc_execute_line(%s) failed",buf);
+		return false;
+	}
+	protocol_buffer_synchronize();
+	if (sys.abort)
+	{
+		g_error("FluidNC_execute: gcode aborted");
+		return false;           // Bail to main() program loop to reset system.
+	}
+	#if DEBUG_EXECUTE > 1
+		g_debug("FluidNC_execute: gcode completed");
+	#endif
+	return true;
 }

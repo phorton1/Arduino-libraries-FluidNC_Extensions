@@ -11,6 +11,7 @@
 #define MAX_MESH_X_STEPS  15
 #define MAX_MESH_Y_STEPS  9
 
+#define MESH_USER_DEFINED_HOMING  0
 
 class Mesh : public Configuration::Configurable
 {
@@ -18,37 +19,33 @@ class Mesh : public Configuration::Configurable
 
         Mesh();
 
-        bool isValid();
-            // returns true if doMeshLeveling succeeded
-
-        float getZOffset(float mx, float my);
-            // After $HZ works, isValid() will return true and one can
-            // call getZOffset with mx,my in machine coordinates to get the
-            // interpolated mesh z offset at that point.
-
         bool doMeshLeveling();
-            // called by contained override of weakly linked
-            // user_deefined_homing() on $HZ axis
 
+        bool isValid()         { return m_is_valid; }
         bool inLeveling()      { return m_in_leveling; }
             // to suppress various debug messages in other objects
 
-        float getLineSegLength()  { return _line_seg_length; }
-            // length of interpolated line segments for
-            // cartesian_to_motors()
-
-        void invalidateMesh();
-            // mesh is persistent through reboots,
-            // homing, whatever, until it is invalidated!
-            // should be connected to RST=# and/or $
         void readMesh();
-            // called somewhere (cnc3018::afterParse) to load the
-            // mesh from the file.  Self invalidates if the mesh
-            // parameters have changed since creation.
+            // called from setup() once to initially load the mesh from
+            // the file.  Self invalidates if the parameters have changed
+            // since creation. Also self invalidates via RuntimeSetting
+            // changes in group()
+
+        bool cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* position);
+        void motors_to_cartesian(float* cartesian, float* motors, int n_axis);
+
+        #if MESH_USER_DEFINED_HOMING
+            bool user_defined_homing(AxisMask axisMask);
+        #endif
+
+        int getNumSteps()       { return ((int) _x_steps) * ((int)_y_steps); }
+        int getCurStep()        { return m_cur_step; }
+        float getZPulloff()     { return _z_pulloff; }
+        float getZeroPos()      { return m_zero_point; }
 
     private:
 
-        float m_mesh_x;
+        float m_mesh_x;     // position of mesh
         float m_mesh_y;
 
         // config variables
@@ -63,8 +60,11 @@ class Mesh : public Configuration::Configurable
         float _z_feed_rate;
         float _line_seg_length;
 
+        int   m_num_probes;
+
         // working variables
 
+        int     m_cur_step;                                 // which step are we on
         bool    m_in_leveling;                              // true while in doMeshLeveling
         bool    m_is_valid;                                 // mesh levelling has completed
         float   m_zero_point;                               // the absolute machine position of z=0 at xy=0,0 (5,5)
@@ -72,26 +72,29 @@ class Mesh : public Configuration::Configurable
         float   m_dx;                                       // size of a step in machine coordinates
         float   m_dy;
 
-        // configurable api
+        // FluidNC::Configurable api
 
         void group(Configuration::HandlerBase& handler) override;
 
         // implementation
 
+        void debug_mesh();
         void init_mesh();
+        void invalidateMesh();
+
         bool probeOne(int x, int y, float *zResult);
         bool zPullOff(float from);
-        void debug_mesh();
-
-
         bool writeMesh();
+
+        float getZOffset(float mx, float my);
+            // After doMeshLeveling() works, m_is_valid will be true and one can
+            // call getZOffset with mx,my in machine coordinates to get the
+            // interpolated mesh z offset at that point.
 
 };  // class Mesh
 
 
-// Call these from your app by overriding the WEAK_LINK methods of the
-// same name from FluidNC
+extern Mesh the_mesh;
 
-extern bool mesh_cartesian_to_motors(Mesh *mesh, float* target, plan_line_data_t* pl_data, float* position);
-extern void mesh_motors_to_cartesian(Mesh *mesh, float* cartesian, float* motors, int n_axis);
-extern bool mesh_user_defined_homing(Mesh *mesh, AxisMask axisMask);
+
+
