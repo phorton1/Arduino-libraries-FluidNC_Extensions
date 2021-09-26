@@ -43,6 +43,12 @@ class Mesh : public Configuration::Configurable
         float getZPulloff()     { return _z_pulloff; }
         float getZeroPos()      { return m_zero_point; }
 
+        float getHeight()       { return _height; }
+        float getWidth()        { return _width; }
+        int   getXSteps()       { return _x_steps; }
+        int   getYSteps()       { return _y_steps; }
+        int   getNumProbes()    { return m_num_probes; }
+
     private:
 
         float m_mesh_x;     // position of mesh
@@ -60,7 +66,7 @@ class Mesh : public Configuration::Configurable
         float _z_feed_rate;
         float _line_seg_length;
 
-        int   m_num_probes;
+        float  m_num_probes;
 
         // working variables
 
@@ -95,6 +101,3 @@ class Mesh : public Configuration::Configurable
 
 
 extern Mesh the_mesh;
-
-
-

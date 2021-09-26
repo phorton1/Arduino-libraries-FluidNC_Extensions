@@ -419,7 +419,8 @@ bool Mesh::probeOne(int x, int y, float *zResult)
 
     bool ok = true;
     int probe_num = 0;
-    float probe_values[m_num_probes];
+	int i_num_probes = m_num_probes;
+    float probe_values[i_num_probes];
 
     while (ok && probe_num < m_num_probes)
     {
