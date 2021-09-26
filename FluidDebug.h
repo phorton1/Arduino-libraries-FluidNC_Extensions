@@ -7,4 +7,7 @@
 extern void g_info(const char *format, ...);
 extern void g_debug(const char *format, ...);
 extern void g_error(const char *format, ...);
-extern bool FluidNC_execute(char *buf);
+
+#if 0
+    extern bool FluidNC_execute(char *buf);
+#endif

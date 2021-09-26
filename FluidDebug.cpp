@@ -45,32 +45,39 @@ void g_error(const char *format, ...)
 
 
 
-bool FluidNC_execute(char *buf)
-{
-	#if DEBUG_EXECUTE
-		g_debug("FluidNC_execute(%s)",buf);
-	#endif
+#if 0
 
-	Error rslt = gc_execute_line(buf, allClients);
-
-	#if DEBUG_EXECUTE > 1
-		g_debug("FluidNC_execute rslt=%d",rslt);
-	#endif
-
-	if (rslt != Error::Ok)
+	bool FluidNC_execute(char *buf)
+		// I think there are problems with this.
+		// It kept crashing when I tried to use it
+		// to do probes
 	{
-		report_status_message(rslt, allClients);
-		g_error("FluidNC_execute: gc_execute_line(%s) failed",buf);
-		return false;
+		#if DEBUG_EXECUTE
+			g_debug("FluidNC_execute(%s)",buf);
+		#endif
+
+		Error rslt = gc_execute_line(buf, allClients);
+
+		#if DEBUG_EXECUTE > 1
+			g_debug("FluidNC_execute rslt=%d",rslt);
+		#endif
+
+		if (rslt != Error::Ok)
+		{
+			report_status_message(rslt, allClients);
+			g_error("FluidNC_execute: gc_execute_line(%s) failed",buf);
+			return false;
+		}
+		protocol_buffer_synchronize();
+		if (sys.abort)
+		{
+			g_error("FluidNC_execute: gcode aborted");
+			return false;           // Bail to main() program loop to reset system.
+		}
+		#if DEBUG_EXECUTE > 1
+			g_debug("FluidNC_execute: gcode completed");
+		#endif
+		return true;
 	}
-	protocol_buffer_synchronize();
-	if (sys.abort)
-	{
-		g_error("FluidNC_execute: gcode aborted");
-		return false;           // Bail to main() program loop to reset system.
-	}
-	#if DEBUG_EXECUTE > 1
-		g_debug("FluidNC_execute: gcode completed");
-	#endif
-	return true;
-}
+
+#endif
