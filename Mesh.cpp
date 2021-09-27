@@ -824,29 +824,29 @@ bool Mesh::writeMesh()
 
 
 
-#if MESH_USER_DEFINED_HOMING
-	bool Mesh::user_defined_homing(AxisMask axisMask)
-	{
-		// $HZ builds the mesh
-		// $HY invalidates the mesh
-
-		if (axisMask == Y_AXIS_MASK)
-		{
-			g_debug("Mesh::user_defined_homing Y calling invalidateMesh()");
-			invalidateMesh();
-			return true;
-		}
-
-		if (axisMask == Z_AXIS_MASK)
-		{
-			g_debug("Mesh::user_defined_homing Z calling doMeshLeveling()");
-			doMeshLeveling();
-			return true;
-		}
-
-		return false;
-	}
-#endif
+//  #if MESH_USER_DEFINED_HOMING
+//  	bool Mesh::user_defined_homing(AxisMask axisMask)
+//  	{
+//  		// $HZ builds the mesh
+//  		// $HY invalidates the mesh
+//
+//  		if (axisMask == Y_AXIS_MASK)
+//  		{
+//  			g_debug("Mesh::user_defined_homing Y calling invalidateMesh()");
+//  			invalidateMesh();
+//  			return true;
+//  		}
+//
+//  		if (axisMask == Z_AXIS_MASK)
+//  		{
+//  			g_debug("Mesh::user_defined_homing Z calling doMeshLeveling()");
+//  			doMeshLeveling();
+//  			return true;
+//  		}
+//
+//  		return false;
+//  	}
+//  #endif
 
 
 //======================================================================

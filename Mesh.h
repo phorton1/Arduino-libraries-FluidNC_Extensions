@@ -11,7 +11,6 @@
 #define MAX_MESH_X_STEPS  15
 #define MAX_MESH_Y_STEPS  9
 
-#define MESH_USER_DEFINED_HOMING  0
 
 class Mesh : public Configuration::Configurable
 {
@@ -33,10 +32,6 @@ class Mesh : public Configuration::Configurable
 
         bool cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* position);
         void motors_to_cartesian(float* cartesian, float* motors, int n_axis);
-
-        #if MESH_USER_DEFINED_HOMING
-            bool user_defined_homing(AxisMask axisMask);
-        #endif
 
         int getNumSteps()       { return ((int) _x_steps) * ((int)_y_steps); }
         int getCurStep()        { return m_cur_step; }
@@ -101,3 +96,5 @@ class Mesh : public Configuration::Configurable
 
 
 extern Mesh the_mesh;
+    // If you include Mesh.h, you MUST declare the instance
+    // in one of your sketch ino or cpp files!
