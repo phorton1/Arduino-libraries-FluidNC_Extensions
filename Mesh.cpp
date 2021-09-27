@@ -64,7 +64,6 @@
 #if USE_MESH_TASK
 	void meshTask(void* pvParameters)
 	{
-
 		((Mesh *)pvParameters)->doMeshLeveling();
 	}
 #endif
