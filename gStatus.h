@@ -70,9 +70,15 @@ public:
 
     // wrappers
 
+    static float getFeedRate();
     static float getAxisMaxTravel(int axis);
     static float getAxisPulloff(int axis);
-    static bool getProbeState();
+    static float getAxisSeekRate(int axis);     // the faster of the two
+    static float getAxisFeedRate(int axis);
+    static volatile float getFeedOverride();
+    static float getRapidFeedOverride();
+    static float getSpindleOverride();
+    static bool  getProbeState();
 
     // public state variables
 

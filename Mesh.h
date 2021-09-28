@@ -12,6 +12,23 @@
 #define MAX_MESH_Y_STEPS  9
 
 
+// these constants are here for use by multiple clients
+// but not used in this object
+
+
+#define LIVE_Z_MIN      -2.000
+#define LIVE_Z_MAX       2.000
+#define LIVE_Z_DEFAULT   0.000
+#define LIVE_Z_COARSE    0.020
+#define LIVE_Z_FINE      0.002
+
+#define CMD_LIVE_Z_PLUS_COARSE   0x11   // ctrl-Q
+#define CMD_LIVE_Z_PLUS_FINE     0x17	// ctrl-W
+#define CMD_LIVE_Z_RESET         0x05	// ctrl-E
+#define CMD_LIVE_Z_MINUS_FINE    0x12	// ctrl-R
+#define CMD_LIVE_Z_MINUS_COARSE  0x14	// ctrl-T
+
+
 class Mesh : public Configuration::Configurable
 {
     public:
@@ -44,6 +61,10 @@ class Mesh : public Configuration::Configurable
         int   getYSteps()       { return _y_steps; }
         int   getNumProbes()    { return m_num_probes; }
 
+        void  setLiveZ(uint8_t cmd);
+        float getLiveZ()        { return m_live_z; }
+        float getLastMeshZ()    { return m_last_mesh_z; }
+
     private:
 
         float m_mesh_x;     // position of mesh
@@ -59,9 +80,12 @@ class Mesh : public Configuration::Configurable
         float _z_pulloff;
         float _z_max_travel;
         float _z_feed_rate;
+        float _xy_seek_rate;
         float _line_seg_length;
 
         float  m_num_probes;
+        float  m_live_z;
+        float  m_last_mesh_z;
 
         // working variables
 
@@ -83,6 +107,7 @@ class Mesh : public Configuration::Configurable
         void init_mesh();
         void invalidateMesh();
 
+        bool moveTo(float x, float y);
         bool probeOne(int x, int y, float *zResult);
         bool zPullOff(float from);
         bool writeMesh();

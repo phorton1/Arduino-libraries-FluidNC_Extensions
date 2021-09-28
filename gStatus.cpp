@@ -18,15 +18,28 @@
 gStatus g_status;
 
 
-// overrides in protocol.h
 
-// extern volatile Percent rtFOverride;  // Feed override value in percent
-// extern volatile Percent rtROverride;  // Rapid feed override value in percent
-// extern volatile Percent rtSOverride;  // Spindle override value in percent
-//
-// rtAccessoryOverride.bit.coolantFloodOvrToggle
+//---------------------------------------------
+// wrappers
+//---------------------------------------------
+
+SDState gStatus::getSDState(bool refresh/*=false*/)
+{
+	if (refresh && config->_sdCard)
+		return config->_sdCard->begin(SDState::Idle);
+	return m_sdcard_state;
+}
 
 
+float gStatus::getFeedRate()				{ return Stepper::get_realtime_rate(); }
+float gStatus::getAxisMaxTravel(int axis)	{ return config->_axes->_axis[axis]->_maxTravel; }
+float gStatus::getAxisPulloff(int axis)		{ return config->_axes->_axis[axis]->_motors[0]->_pulloff; }
+float gStatus::getAxisSeekRate(int axis)	{ return config->_axes->_axis[axis]->_homing->_seekRate; }     // the faster of the two
+float gStatus::getAxisFeedRate(int axis)	{ return config->_axes->_axis[axis]->_homing->_feedRate; }
+bool  gStatus::getProbeState()				{ return (bool) probeState; } // in MotionControl.cpp
+volatile float gStatus::getFeedOverride()	{ return rtFOverride; }	// in Protocol.cpp
+float gStatus::getRapidFeedOverride()		{ return rtROverride; }	// in Protocol.cpp
+float gStatus::getSpindleOverride()			{ return rtSOverride; }	// in Protocol.cpp
 
 
 //-----------------------------
@@ -186,37 +199,6 @@ void gStatus::initWifiEventHandler()
 	// register the wifiEvent handler
 {
 	WiFi.onEvent(onWiFiEvent);
-}
-
-
-
-//---------------------------------------------
-// wrappers
-//---------------------------------------------
-
-SDState gStatus::getSDState(bool refresh/*=false*/)
-{
-	if (refresh && config->_sdCard)
-		return config->_sdCard->begin(SDState::Idle);
-	return m_sdcard_state;
-}
-
-
-float gStatus::getAxisMaxTravel(int axis)
-{
-	return config->_axes->_axis[axis]->_maxTravel;
-}
-
-
-float gStatus::getAxisPulloff(int axis)
-{
-	return config->_axes->_axis[axis]->_motors[0]->_pulloff;
-}
-
-
-bool gStatus::getProbeState()
-{
-	return (bool) probeState;		// in MotionControl.cpp
 }
 
 

@@ -31,6 +31,8 @@
 #include <Configuration/RuntimeSetting.h>       // FluidNC
 #include <Machine/MachineConfig.h>              // FluidNC
 
+#include <gStatus.h>							// FluidNC_extensions
+
 #include <SPIFFS.h>
 #include <FS.h>
 
@@ -53,20 +55,13 @@
 #define DEFAULT_MESH_Z_PULLOFF      2.0       // pull off after 0th point
 #define DEFAULT_MESH_Z_MAX_TRAVEL   -35.0     // mm in negative direction from absolute 0,0
 #define DEFAULT_MESH_Z_FEED_RATE    20.0      // mm per min
+#define DEFAULT_MESH_XY_SEEK_RATE   800.00
 #define DEFAULT_LINE_SEG_LENGTH     2         // mm
 #define DEFAULT_NUM_PROBES          1         // count
 
 
 #define MESH_DATA_FILE  "/mesh_data.txt"
 
-#define USE_MESH_TASK  0
-
-#if USE_MESH_TASK
-	void meshTask(void* pvParameters)
-	{
-		((Mesh *)pvParameters)->doMeshLeveling();
-	}
-#endif
 
 
 Mesh::Mesh()
@@ -75,6 +70,9 @@ Mesh::Mesh()
     m_in_leveling = 0;
 	m_cur_step = 0;
 
+	m_live_z = 0;
+    m_last_mesh_z = 0;
+
 	_height			    = DEFAULT_MESH_HEIGHT;
 	_width			    = DEFAULT_MESH_WIDTH;
 	_x_steps		    = DEFAULT_MESH_X_STEPS;
@@ -82,6 +80,7 @@ Mesh::Mesh()
 	_z_pulloff		    = DEFAULT_MESH_Z_PULLOFF;
 	_z_max_travel	    = DEFAULT_MESH_Z_MAX_TRAVEL;
 	_z_feed_rate	    = DEFAULT_MESH_Z_FEED_RATE;
+	_xy_seek_rate       = DEFAULT_MESH_XY_SEEK_RATE;
     _line_seg_length    = DEFAULT_LINE_SEG_LENGTH;
 }
 
@@ -95,6 +94,7 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
 	handler.item("pulloff",     _z_pulloff);
 	handler.item("max_travel",  _z_max_travel);
 	handler.item("feed_rate",   _z_feed_rate);
+	handler.item("feed_rate",   _xy_seek_rate);
     handler.item("line_seg_len",_line_seg_length);
 	handler.item("num_probes",   m_num_probes);
 	if (m_num_probes > 4)
@@ -356,15 +356,15 @@ static bool _mesh_execute(char *buf)
 }
 
 
-static bool _moveTo(float x, float y)
+bool Mesh::moveTo(float x, float y)
     // move in current coordinate system
     // _ means it does not use any member variables
 {
     #if DEBUG_MESH > 2
         g_debug("MESH: _moveTo(%5.3f,%5.3f)",x,y);
     #endif
-    char buf[30];
-    sprintf(buf,"g0 g53 x%5.3f y%5.3f",x,y);
+    char buf[36];
+    sprintf(buf,"g1 g53 x%5.3f y%5.3f f%5.3f",x,y,_xy_seek_rate);
     return _mesh_execute(buf);
 }
 
@@ -379,8 +379,10 @@ bool Mesh::zPullOff(float from) // move z upwards relative, check that probe goe
         g_debug("MESH: zPullOff() from=%5.3f to=%5.3f",from,to);
     #endif
 
-    char buf[24];
-    sprintf(buf,"g0 g53 z%5.3f",to);
+    char buf[30];
+    sprintf(buf,"g1 g53 z%5.3f f%5.3f",to,g_status.getAxisFeedRate(Z_AXIS));
+		// 	We use the slower one (feed rate is slower than seek rate) for the mesh
+
     bool move_ok = _mesh_execute(buf);
     if (move_ok)
     {
@@ -539,7 +541,7 @@ bool Mesh::doMeshLeveling()
 			if (sys.abort)
 				return false;
 
-            if (_moveTo(m_mesh_x + x*m_dx, m_mesh_y + y*m_dy))
+            if (moveTo(m_mesh_x + x*m_dx, m_mesh_y + y*m_dy))
             {
                 float value = 0.0;
                 if (probeOne(x,y,&value))
@@ -877,9 +879,9 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
     {
         memcpy(new_pos,target,3 * sizeof(float));
 
-        #ifdef FUNKY_REALTIME_STUFF
-            new_pos[Z_AXIS] += realtimeZOffset;
-        #endif
+		// ADD the live_z to the motor position
+
+		new_pos[Z_AXIS] += m_live_z;
 
         if (!mc_line(new_pos, pl_data))
 			return false;
@@ -941,9 +943,9 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
 
         memcpy(tpos,new_pos,3 * sizeof(float));
 
-        #ifdef FUNKY_REALTIME_STUFF
-            tpos[Z_AXIS] += realtimeZOffset;
-        #endif
+		// ADD the live_z to the motor position
+
+		tpos[Z_AXIS] += m_live_z;
 
         // get the zOffset at the work position
         // and add it to the working copy
@@ -984,9 +986,11 @@ void Mesh::motors_to_cartesian(float* cartesian, float* motors, int n_axis)
     // the only thing we might change is the Z
 
     memcpy(cartesian,motors,3 * sizeof(float));
-    #ifdef FUNKY_REALTIME_STUFF
-        cartesian[Z_AXIS] -= realtimeZOffset;
-    #endif
+
+	// SUBTRACT out the live z
+	// if it's negative we added it during cartesian_to_motors()
+
+    cartesian[Z_AXIS] -= m_live_z;
 
     // if the mesh is not valid, just return the input
 
@@ -997,7 +1001,7 @@ void Mesh::motors_to_cartesian(float* cartesian, float* motors, int n_axis)
     // get the zOffset at the location
     // and subtract it from the z location
 
-    float zoff = getZOffset(motors[X_AXIS],motors[Y_AXIS]);
+    float zoff = m_last_mesh_z = getZOffset(motors[X_AXIS],motors[Y_AXIS]);
 
     #if DEBUG_VFORWARD
         g_debug("M2C(%5.3f,%5.3f,%5.3f) subtracting z_offset(%5.3f)",
@@ -1008,4 +1012,26 @@ void Mesh::motors_to_cartesian(float* cartesian, float* motors, int n_axis)
     #endif
 
     cartesian[Z_AXIS] -= zoff;
+}
+
+
+void  Mesh::setLiveZ(uint8_t cmd)
+{
+	float z = m_live_z;
+	if (cmd == CMD_LIVE_Z_PLUS_COARSE)
+		z += LIVE_Z_COARSE;
+	else if (cmd == CMD_LIVE_Z_PLUS_FINE)
+		z += LIVE_Z_FINE;
+	else if (cmd == CMD_LIVE_Z_RESET)
+		z = LIVE_Z_DEFAULT;
+	else if (cmd == CMD_LIVE_Z_MINUS_FINE)
+		z -= LIVE_Z_COARSE;
+	else if (cmd == CMD_LIVE_Z_MINUS_COARSE)
+		z -= LIVE_Z_COARSE;
+	if (z > LIVE_Z_MAX)
+		z = LIVE_Z_MAX;
+	if (z < LIVE_Z_MIN)
+		z = LIVE_Z_MIN;
+	g_debug("Mesh::setLiveZ(ctrl-%c) old(%0.3f) new(%0.3f)",('A' + cmd - 1),m_live_z,z);
+	m_live_z = z;
 }
