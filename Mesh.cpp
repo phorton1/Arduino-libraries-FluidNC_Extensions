@@ -450,7 +450,8 @@ bool Mesh::probeOne(int x, int y, float *zResult)
 		if (sys.abort)
 			return false;
 
-        zPullOff(value);
+        if (!zPullOff(value))
+			return false;
     }
 
     float value = 0;
@@ -871,6 +872,16 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
     memset(tpos,0,6*sizeof(float));
     memset(new_pos,0,6*sizeof(float));
 
+	#if DEBUG_VREVERSE
+		g_debug("C2M from(%5.3f,%5.3f,%5.3f) to (%5.3f,%5.3f,%5.3f)",
+			position[X_AXIS],
+            position[Y_AXIS],
+            position[Z_AXIS],
+            target[X_AXIS],
+            target[Y_AXIS],
+            target[Z_AXIS]);
+	#endif
+
     // if the mesh is not valid, just call a single mc_line()
     // for the entire traversal
 
@@ -881,7 +892,8 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
 
 		// ADD the live_z to the motor position
 
-		new_pos[Z_AXIS] += m_live_z;
+		if (sys.state != State::Homing)
+			new_pos[Z_AXIS] += m_live_z;
 
         if (!mc_line(new_pos, pl_data))
 			return false;
@@ -889,17 +901,6 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
     }
 
     memcpy(new_pos,position,3 * sizeof(float));
-
-	#if DEBUG_VREVERSE
-		g_debug("C2M from(%5.3f,%5.3f,%5.3f) to (%5.3f,%5.3f,%5.3f)",
-			new_pos[X_AXIS],
-            new_pos[Y_AXIS],
-            new_pos[Z_AXIS],
-            target[X_AXIS],
-            target[Y_AXIS],
-            target[Z_AXIS]);
-	#endif
-
 
     // break the x/y portion of the line up into multiple segments
 

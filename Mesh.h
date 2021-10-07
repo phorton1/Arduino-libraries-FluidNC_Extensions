@@ -84,7 +84,7 @@ class Mesh : public Configuration::Configurable
         float _line_seg_length;
 
         float  m_num_probes;
-        float  m_live_z;
+        volatile float m_live_z;
         float  m_last_mesh_z;
 
         // working variables
