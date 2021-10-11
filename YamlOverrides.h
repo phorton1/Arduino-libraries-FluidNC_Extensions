@@ -8,10 +8,11 @@
 
 #include <SPIFFS.h>
 #include "FluidDebug.h"
+#include <Machine/MachineConfig.h>	// FluidNC
 #include <Configuration/RuntimeSetting.h>	// FluidNC
 
 
-#define DEBUG_YAML_OVERRIDES    		1
+#define DEBUG_YAML_OVERRIDES    		2
 
 #define v_error g_debug
 	// until I figuire out a good way
