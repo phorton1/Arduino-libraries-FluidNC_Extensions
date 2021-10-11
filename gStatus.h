@@ -64,6 +64,11 @@ public:
     SDState getSDState(bool refresh=false);
 
     uint8_t getWifiState()          { return m_wifi_state; }
+    static uint8_t getWifiStationMode();
+    static const char *getWifiName();
+        // return name of current STATION or ACCESS_POINT when connected
+    static const char *getIPAddress();
+        // return current IP address when conneted
 
     const char* getActiveFilename() { return m_active_filename; }
     float filePct()                 { return m_file_pct; }

@@ -141,18 +141,18 @@ void gStatus::gWifiEvent(uint16_t event)
 {
 	switch (static_cast<WiFiEvent_t>(event))
 	{
-		case SYSTEM_EVENT_AP_START                 :    // ESP32 soft-AP start
 		case SYSTEM_EVENT_STA_DISCONNECTED         :    // ESP32 station disconnected from AP
 		case SYSTEM_EVENT_AP_STADISCONNECTED       :    // a station disconnected from ESP32 soft-AP
-		case SYSTEM_EVENT_WIFI_READY               :    // ESP32 WiFi ready
 			m_wifi_state = IND_STATE_ENABLED;
 			break;
 
 		// case SYSTEM_EVENT_SCAN_DONE                :    // ESP32 finish scanning AP
+		case SYSTEM_EVENT_AP_START                 :    // ESP32 soft-AP start
 		case SYSTEM_EVENT_STA_START                :    // ESP32 station start
 			m_wifi_state = IND_STATE_ACTIVE;
 			break;
 
+		case SYSTEM_EVENT_WIFI_READY 			   :
 		case SYSTEM_EVENT_AP_STACONNECTED          :    // a station connected to ESP32 soft-AP
 		case SYSTEM_EVENT_STA_GOT_IP               :    // ESP32 station got IP from connected AP
 		case SYSTEM_EVENT_STA_CONNECTED            :    // ESP32 station connected to AP
@@ -161,7 +161,7 @@ void gStatus::gWifiEvent(uint16_t event)
 			break;
 
 		case SYSTEM_EVENT_AP_STOP                  :    // ESP32 soft-AP stop
-		case SYSTEM_EVENT_STA_STOP                 :    // ESP32 station stop
+		// case SYSTEM_EVENT_STA_STOP                 :    // ESP32 station stop
 		case SYSTEM_EVENT_STA_LOST_IP              :    // ESP32 station lost IP and the IP is reset to 0
 		case SYSTEM_EVENT_STA_WPS_ER_FAILED        :    // ESP32 station wps fails in enrollee mode
 		case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT       :    // ESP32 station wps timeout in enrollee mode
@@ -199,6 +199,47 @@ void gStatus::initWifiEventHandler()
 	// register the wifiEvent handler
 {
 	WiFi.onEvent(onWiFiEvent);
+}
+
+
+uint8_t gStatus::getWifiStationMode()
+{
+	// 0 = none, 1=sta, 2=ap, 3=sta/ap
+	wifi_mode_t mode = WiFi.getMode();
+	return (uint8_t) mode;
+}
+const char *gStatus::getWifiName()
+{
+	wifi_mode_t mode = WiFi.getMode();
+	if (mode == 1)	// sta
+	{
+		static String s = WiFi.SSID().c_str();
+		return s.c_str();
+		// return "blah";	// ;
+	}
+	else if (mode)	// 2 or 3 for AP and AP/STA mode
+	{
+		return WiFi.getHostname();
+	}
+	else
+		return "";
+}
+
+const char *gStatus::getIPAddress()
+{
+	wifi_mode_t mode = WiFi.getMode();
+	if (mode == 1)	// sta
+		return WiFi.localIP().toString().c_str();
+	else if (mode)	// 2 or 3 for AP and AP/STA mode
+	{
+		IPAddress ip = WiFi.softAPIP();
+		static char buf[30];
+		sprintf(buf,"%d.%d.%d.%d",ip[0],ip[1],ip[2],ip[3]);
+		return buf;
+	}
+	else
+		return "";
+	IPAddress softAPIP();
 }
 
 
