@@ -13,6 +13,7 @@
 #include <Serial.h>                 // FluidNC
 #include <Machine/MachineConfig.h>  // FluidNC
 
+
 #define DEBUG_WIFI  0
 
 gStatus g_status;
@@ -215,11 +216,17 @@ const char *gStatus::getWifiName()
 	{
 		static String s = WiFi.SSID().c_str();
 		return s.c_str();
-		// return "blah";	// ;
 	}
 	else if (mode)	// 2 or 3 for AP and AP/STA mode
 	{
-		return WiFi.getHostname();
+		// show the actual, current AP SSID (possibly yaml driven)
+
+		static String s =  WiFi.softAPSSID();
+		return s.c_str();
+
+		// return WiFi.softAPgetHostname();		 returns "espressif"
+		// static String s =  WebUI::wifi_config.Hostname(); returns "fluidnc"
+		// return WiFi.getHostname();	returns "fluidnc"
 	}
 	else
 		return "";
