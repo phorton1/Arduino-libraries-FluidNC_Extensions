@@ -280,7 +280,7 @@ void gStatus::updateStatus(bool inMeshLeveling /*=false*/)
 		if (m_sdcard_state == SDState::Busy)
 		{
 			m_active_filename = sdCard->filename();
-			m_file_pct = sdCard->report_perc_complete();
+			m_file_pct = sdCard->percent_complete();
 		}
 	}
 
