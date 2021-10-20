@@ -57,7 +57,7 @@ public:
         // in order to correctly set the JobState
 
     JobState getJobState()          { return m_job_state; }
-    uint8_t getLastAlaram()         { return m_last_alarm; }
+    uint8_t getLastAlarm()          { return m_last_alarm; }
         // grabbed when job state changes so it can be displayed later
 
     State getSysState()             { return m_sys_state; }
