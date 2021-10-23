@@ -21,7 +21,7 @@ This library provides a number of extensions to the
 
 ## Credits and License
 
-This library is licensed undere the
+This library is licensed under the
 [GNU General Public License v3.0](https://github.com/phorton1/Arduino-libraries-FluidNC_extensisions/tree/master/LICENSE.TXT)
 
 **Credits**
