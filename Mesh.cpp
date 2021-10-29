@@ -287,19 +287,17 @@ float Mesh::getZOffset(float mx, float my)
 
 void Mesh::debug_mesh()
 {
-    // #if DEBUG_MESH
-        g_debug("MESH: m_zero_point == %6.3f",m_zero_point);
-        for (int y=_y_steps-1; y>=0; y--)
-        {
-            static char buf[100];
-            sprintf(buf,"MESH[%d] ",y);
-            for (int x=0; x<_x_steps; x++)
-            {
-                sprintf(&buf[strlen(buf)]," % 6.3f",m_mesh[x][y]);
-            }
-            g_debug(buf);
-        }
-    // #endif
+	g_info("MESH: position=(%0.3f,%0.3f,%0.3f)",m_mesh_x,m_mesh_y,m_zero_point);
+	for (int y=_y_steps-1; y>=0; y--)
+	{
+		static char buf[100];
+		sprintf(buf,"MESH[%d] ",y);
+		for (int x=0; x<_x_steps; x++)
+		{
+			sprintf(&buf[strlen(buf)]," % 6.3f",m_mesh[x][y]);
+		}
+		g_info(buf);
+	}
 }
 
 
