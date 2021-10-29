@@ -53,12 +53,13 @@ public:
     void gWifiEvent(uint16_t event);
 
     void updateStatus(bool inMeshLeveling=false);
-        // If you are using the mesh, please pass in "inLeveling" state
-        // in order to correctly set the JobState
+        // Called by client to update state of this object in a loop of some sort.
+        // If you are using the mesh, pass in "inLeveling" state in order to c
+        // correctly set the JobState
 
     JobState getJobState()          { return m_job_state; }
     uint8_t getLastAlarm()          { return m_last_alarm; }
-        // grabbed when job state changes so it can be displayed later
+        // alarm number is grabbed when job state changes so it can be displayed later
 
     State getSysState()             { return m_sys_state; }
     SDState getSDState(bool refresh=false);
@@ -68,12 +69,12 @@ public:
     static const char *getWifiName();
         // return name of current STATION or ACCESS_POINT when connected
     static const char *getIPAddress();
-        // return current IP address when conneted
+        // return current IP address when connected
 
     const char* getActiveFilename() { return m_active_filename; }
     float filePct()                 { return m_file_pct; }
 
-    // wrappers
+    // wrappers to FluidNC global variables
 
     static float getFeedRate();
     static float getAxisMaxTravel(int axis);
@@ -85,7 +86,7 @@ public:
     static float getSpindleOverride();
     static bool  getProbeState();
 
-    // public state variables
+    // public denormalized FluidNC state variables
 
     int32_t m_sys_pos[G_NUM_AXIS];
     float m_machine_pos[G_NUM_AXIS];

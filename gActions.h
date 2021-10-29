@@ -3,7 +3,7 @@
 //------------------------------------------------------------------
 // besides the 'state' from gStatus, this namespace provides
 // a set of consolidated entry points to "do" things in FluidNC,
-// hiding as much of the "junk" of doing so as possible.
+// hiding the various multiple FluidNC objects from clients.
 
 
 #pragma once
