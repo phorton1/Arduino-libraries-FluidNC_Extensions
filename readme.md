@@ -148,16 +148,16 @@ file, or via command line parameters into the Serial Port, or via the
 
 ```yaml
     Mesh:
-        height = 100            # height of mesh in mm
-        width  = 200            # width of mesh in mm
-        x_steps = 10            # steps in x direction
-        y_steps = 5             # steps in y direction
-        pulloff = 3             # mm to "pulloff" from each sucessful prob
-        max_travel = 50         # max mm travel of the Z axis during G38.2 gcode command
-        feed_rate = 100         # z axis feed rate to be used when meshing (slow)
-        seek_rate = 400;        # z_axis feed rate to be used when meshing (fast)
-        line_seg_len = 0.5      # granularity of z rate calculations
-        num_probes = 2          # upto 4 probes per point can be averaged together
+        height: 100            # height of mesh in mm
+        width: 200             # width of mesh in mm
+        x_steps: 10            # steps in x direction
+        y_steps: 5             # steps in y direction
+        pulloff: 3             # mm to "pulloff" from each sucessful prob
+        max_travel: 50         # max mm travel of the Z axis during G38.2 gcode command
+        feed_rate: 100         # z axis feed rate to be used when meshing (slow)
+        seek_rate: 400;        # z_axis feed rate to be used when meshing (fast)
+        line_seg_len: 0.5      # granularity of z rate calculations
+        num_probes: 2          # upto 4 probes per point can be averaged together
 ```
 
 These configuration variables can also be set via the *Serial Terminal Command Line*:
