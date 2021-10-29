@@ -213,8 +213,8 @@ or from the *Serial Terminal* **if you override** the weakly bound FluidNC **use
 ```
 void user_realtime_command(uint8_t command, Print &client)
 {
-	switch (command)
-	{
+    switch (command)
+    {
         case CMD_LIVE_Z_PLUS_COARSE :
         case CMD_LIVE_Z_PLUS_FINE :
         case CMD_LIVE_Z_RESET :
@@ -222,7 +222,7 @@ void user_realtime_command(uint8_t command, Print &client)
         case CMD_LIVE_Z_MINUS_COARSE :
             the_mesh.setLiveZ(command);
             break;
-	}
+    }
 }
 ```
 
