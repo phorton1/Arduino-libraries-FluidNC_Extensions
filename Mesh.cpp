@@ -29,6 +29,7 @@
 #include <System.h>                             // FluidNC
 #include <Uart.h>                               // FluidNC
 #include <Configuration/RuntimeSetting.h>       // FluidNC
+#include <Planner.h>
 #include <Machine/MachineConfig.h>              // FluidNC
 
 #include <gStatus.h>							// FluidNC_extensions
@@ -964,8 +965,27 @@ bool Mesh::cartesian_to_motors(float* target, plan_line_data_t* pl_data, float* 
 				zoff);
 		#endif
 
-		if (!mc_line(tpos, pl_data))
-			return false;
+		delay(5);	// IMPORTANT: let other tasks run
+
+		// hmmm ... i thought mc_line failing was the problem,
+		// but this code is never executed (I think it was the
+		// dealy that was needed).  And maybe $message/level=DEBUG
+		// helped by emulating that
+
+		int problem_reported = 0;
+		while (!mc_line(tpos, pl_data))
+		{
+			if (sys.abort)
+			{
+				log_error("SYS_ABORT FROM MESH MC_LINE FAIL!!!");
+				return false;
+			}
+			// report the problem once per second
+			// forever with a seconds counter
+			if (problem_reported++ % 100 == 0)
+				log_info("MESH MC_LINE_FAILED " << problem_reported/100);
+			delay(10);
+		}
 
 	}	// for each segment
 
