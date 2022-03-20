@@ -95,7 +95,7 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
 	handler.item("pulloff",     _z_pulloff);
 	handler.item("max_travel",  _z_max_travel);
 	handler.item("feed_rate",   _z_feed_rate);
-	handler.item("feed_rate",   _xy_seek_rate);
+	handler.item("xy_seek_rate",_xy_seek_rate);
     handler.item("line_seg_len",_line_seg_length);
 	handler.item("num_probes",   m_num_probes);
 	if (m_num_probes > 4)
