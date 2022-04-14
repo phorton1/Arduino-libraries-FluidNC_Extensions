@@ -142,18 +142,7 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
 		}
 		else if (rth.is("do_level"))
 		{
-			#if USE_MESH_TASK
-				xTaskCreatePinnedToCore(
-					meshTask,		// method
-					"meshTask",	    // name
-					4096,			// stack_size
-					this,			// parameters
-					1,  			// priority
-					NULL,			// returned handle
-					0);				// core 1=main FluidNC thread/task, 0=my UI and other tasks
-			#else
-				doMeshLeveling();
-			#endif
+			doMeshLeveling();
 			rth.isHandled_ = true;
 		}
 	}
