@@ -17,11 +17,11 @@ namespace gActions
     extern void g_limits_init();                    // GLimits.cpp::limits_init();
 
     extern void setAlarm(uint8_t alarm);            // Protocol.cpp::rtAlarm
-    extern void setLimitMask(uint8_t mask);         // Machine::Axes::limitMask
-    extern uint8_t getNegLimitMask();               // Machine::Axes::neg and posLimitMasks
-    extern uint8_t getPosLimitMask();
-    extern void setNegLimitMask(uint8_t mask);
-    extern void setPosLimitMask(uint8_t mask);
+    extern void setLimitMask(uint32_t mask);        // Machine::Axes::limitMask
+    extern uint32_t getNegLimitMask();              // Machine::Axes::neg and posLimitMasks
+    extern uint32_t getPosLimitMask();
+    extern void setNegLimitMask(uint32_t mask);
+    extern void setPosLimitMask(uint32_t mask);
     extern bool getProbeSucceeded();                // MotionControl.cpp::probe_succeeded
     extern void clearProbeSucceeded();              // MotionControl.cpp::probe_succeeded = false;
 

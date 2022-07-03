@@ -32,11 +32,11 @@ namespace gActions
     void g_reset()						{ mc_reset(); }									// MotionControl.cpp
 	void g_limits_init()				{ limits_init(); }								// GLimits.cpp
 	void setAlarm(uint8_t alarm) 		{ rtAlarm = static_cast<ExecAlarm>(alarm); } 	// Protocol.cpp::rtAlarm
-	void setLimitMask(uint8_t mask) 	{ Machine::Axes::limitMask = mask; }
-	uint8_t getNegLimitMask()			{ return Machine::Axes::negLimitMask; }
-	uint8_t getPosLimitMask()			{ return Machine::Axes::posLimitMask; }
-    void setNegLimitMask(uint8_t mask)	{ Machine::Axes::negLimitMask = mask; }
-    void setPosLimitMask(uint8_t mask)  { Machine::Axes::posLimitMask = mask; }
+	void setLimitMask(uint32_t mask) 	{ Machine::Axes::limitMask = mask; }
+	uint32_t getNegLimitMask()			{ return Machine::Axes::negLimitMask; }
+	uint32_t getPosLimitMask()			{ return Machine::Axes::posLimitMask; }
+    void setNegLimitMask(uint32_t mask) { Machine::Axes::negLimitMask = mask; }
+    void setPosLimitMask(uint32_t mask) { Machine::Axes::posLimitMask = mask; }
 	bool getProbeSucceeded() 			{ return probe_succeeded;	}					// MotionControl.cpp
     void clearProbeSucceeded()			{ probe_succeeded = false; }					// MotionControl.cpp
     void pushGrblText(const char *text)	{ WebUI::inputBuffer.push(text); }
