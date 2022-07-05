@@ -37,6 +37,21 @@
 #include <SPIFFS.h>
 #include <FS.h>
 
+#ifndef CNC_MACHINE
+	#define CNC_MACHINE  1
+#endif
+
+#if CNC_MACHINE==1
+	#pragma message "Mesh.cpp CNC_MACHINE defined as 1"
+#endif
+#if CNC_MACHINE==2
+	#pragma message "Mesh.cpp CNC_MACHINE defined as 2"
+#endif
+#if CNC_MACHINE==3
+	#pragma message "Mesh.cpp CNC_MACHINE defined as 3"
+#endif
+
+
 
 #define DEBUG_MESH          1       // upto 3
 #define DEBUG_GET_Z_OFFSET  0
@@ -48,17 +63,30 @@
 #define Z_AXIS_MASK  0x04
 #define Y_AXIS_MASK  0x02
 
+#if CNC_MACHINE==3
+	#define DEFAULT_MESH_HEIGHT         1100      // mm
+	#define DEFAULT_MESH_WIDTH          1100      // mm
+	#define DEFAULT_MESH_X_STEPS        9         // every 25mm
+	#define DEFAULT_MESH_Y_STEPS        9         // every 20mm
+	#define DEFAULT_MESH_Z_PULLOFF      6.0       // pull off after 0th point
+	#define DEFAULT_MESH_Z_MAX_TRAVEL   -50.0     // mm in negative direction from absolute 0,0
+	#define DEFAULT_MESH_Z_FEED_RATE    80.0      // mm per min
+	#define DEFAULT_MESH_XY_SEEK_RATE   4000.00
+	#define DEFAULT_LINE_SEG_LENGTH     10        // mm
+	#define DEFAULT_NUM_PROBES          1         // count
+#else
+	#define DEFAULT_MESH_HEIGHT         80        // mm
+	#define DEFAULT_MESH_WIDTH          125       // mm
+	#define DEFAULT_MESH_X_STEPS        6         // every 25mm
+	#define DEFAULT_MESH_Y_STEPS        4         // every 20mm
+	#define DEFAULT_MESH_Z_PULLOFF      2.0       // pull off after 0th point
+	#define DEFAULT_MESH_Z_MAX_TRAVEL   -35.0     // mm in negative direction from absolute 0,0
+	#define DEFAULT_MESH_Z_FEED_RATE    20.0      // mm per min
+	#define DEFAULT_MESH_XY_SEEK_RATE   800.00
+	#define DEFAULT_LINE_SEG_LENGTH     2         // mm
+	#define DEFAULT_NUM_PROBES          1         // count
+#endif
 
-#define DEFAULT_MESH_HEIGHT         80        // mm
-#define DEFAULT_MESH_WIDTH          125       // mm
-#define DEFAULT_MESH_X_STEPS        6         // every 25mm
-#define DEFAULT_MESH_Y_STEPS        4         // every 20mm
-#define DEFAULT_MESH_Z_PULLOFF      2.0       // pull off after 0th point
-#define DEFAULT_MESH_Z_MAX_TRAVEL   -35.0     // mm in negative direction from absolute 0,0
-#define DEFAULT_MESH_Z_FEED_RATE    20.0      // mm per min
-#define DEFAULT_MESH_XY_SEEK_RATE   800.00
-#define DEFAULT_LINE_SEG_LENGTH     2         // mm
-#define DEFAULT_NUM_PROBES          1         // count
 
 
 #define MESH_DATA_FILE  "/mesh_data.txt"
