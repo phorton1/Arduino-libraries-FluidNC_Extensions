@@ -8,8 +8,8 @@
 // maximum mesh is big enough for 20mm grid on 3018 machine
 // and occupies about 1/2K of memory
 
-#define MAX_MESH_X_STEPS  15
-#define MAX_MESH_Y_STEPS  9
+#define MAX_MESH_X_STEPS  12
+#define MAX_MESH_Y_STEPS  12
 
 
 // these constants are here for use by multiple clients
@@ -93,7 +93,7 @@ class Mesh : public Configuration::Configurable
         bool    m_in_leveling;                              // true while in doMeshLeveling
         bool    m_is_valid;                                 // mesh levelling has completed
         float   m_zero_point;                               // the absolute machine position of z=0 at xy=0,0 (5,5)
-        float   m_mesh[MAX_MESH_X_STEPS][MAX_MESH_Y_STEPS]; // the mesh
+        float   m_mesh[MAX_MESH_X_STEPS * MAX_MESH_Y_STEPS]; // the mesh
         float   m_dx;                                       // size of a step in machine coordinates
         float   m_dy;
 

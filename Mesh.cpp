@@ -126,10 +126,16 @@ void Mesh::group(Configuration::HandlerBase& handler) // override
 	handler.item("xy_seek_rate",_xy_seek_rate);
     handler.item("line_seg_len",_line_seg_length);
 	handler.item("num_probes",   m_num_probes);
+
 	if (m_num_probes > 4)
 		m_num_probes = 4;
 	if (m_num_probes < 1)
 		m_num_probes = 1;
+
+	if (_x_steps > MAX_MESH_X_STEPS)
+		_x_steps = MAX_MESH_X_STEPS;
+	if (_y_steps > MAX_MESH_Y_STEPS)
+		_y_steps = MAX_MESH_Y_STEPS;
 
 
 	// possibly invalidate the mesh upon certain changes
@@ -252,10 +258,10 @@ float Mesh::getZOffset(float mx, float my)
 
     // get the four values
 
-    float left_bottom =    m_mesh[x_left][y_bottom];
-    float left_top =       m_mesh[x_left][y_top];
-    float right_bottom =   m_mesh[x_right][y_bottom];
-    float right_top =      m_mesh[x_right][y_top];
+    float left_bottom =    m_mesh[y_bottom * MAX_MESH_X_STEPS + x_left];	// old: [x_left][y_bottom];
+    float left_top =       m_mesh[y_top    * MAX_MESH_X_STEPS + x_left];    // old: [x_left][y_top];
+    float right_bottom =   m_mesh[y_bottom * MAX_MESH_X_STEPS + x_right];   // old: [x_right][y_bottom];
+    float right_top =      m_mesh[y_top    * MAX_MESH_X_STEPS + x_right];   // old: [x_right][y_top];
 
     // calculate the contribution
     //
@@ -308,11 +314,11 @@ void Mesh::debug_mesh()
 	g_info("MESH: position=(%0.3f,%0.3f,%0.3f)",m_mesh_x,m_mesh_y,m_zero_point);
 	for (int y=_y_steps-1; y>=0; y--)
 	{
-		static char buf[100];
+		static char buf[180];
 		sprintf(buf,"MESH[%d] ",y);
 		for (int x=0; x<_x_steps; x++)
 		{
-			sprintf(&buf[strlen(buf)]," % 6.3f",m_mesh[x][y]);
+			sprintf(&buf[strlen(buf)]," % 6.3f",m_mesh[y * MAX_MESH_X_STEPS + x]);
 		}
 		g_info(buf);
 	}
@@ -334,11 +340,11 @@ void Mesh::init_mesh()
     m_dx = _width / (_x_steps-1);
     m_dy = _height / (_y_steps-1);
 
-    for (int x=0; x<_x_steps; x++)
-    {
-        for (int y=0; y<_y_steps; y++)
-        {
-            m_mesh[x][y] = 0.00;
+	for (int y=0; y<MAX_MESH_Y_STEPS; y++)
+	{
+		for (int x=0; x<MAX_MESH_X_STEPS; x++)
+		{
+            m_mesh[y * MAX_MESH_X_STEPS + x] = 0.00;
         }
     }
 }
@@ -379,7 +385,7 @@ bool Mesh::moveTo(float x, float y)
     #if DEBUG_MESH > 2
         g_debug("MESH: _moveTo(%5.3f,%5.3f)",x,y);
     #endif
-    char buf[36];
+    char buf[80];
     sprintf(buf,"g1 g53 x%5.3f y%5.3f f%5.3f",x,y,_xy_seek_rate);
     return _mesh_execute(buf);
 }
@@ -395,8 +401,8 @@ bool Mesh::zPullOff(float from) // move z upwards relative, check that probe goe
         g_debug("MESH: zPullOff() from=%5.3f to=%5.3f",from,to);
     #endif
 
-    char buf[30];
-    sprintf(buf,"g1 g53 z%5.3f f%5.3f",to,g_status.getAxisFeedRate(Z_AXIS));
+    char buf[80];
+    sprintf(buf,"g1 g53 z%5.3f f%5.3f",to,_z_feed_rate);	// old: g_status.getAxisFeedRate(Z_AXIS));
 		// 	We use the slower one (feed rate is slower than seek rate) for the mesh
 
     bool move_ok = _mesh_execute(buf);
@@ -422,7 +428,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
         g_debug("MESH: probeOne()");
     #endif
 
-    char buf[24];
+    char buf[60];
     sprintf(buf,"g38.2 z%5.3f f%5.3f",
         _z_max_travel,
         _z_feed_rate);
@@ -451,7 +457,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
         {
             value = steps_to_mpos(probe_steps[Z_AXIS],Z_AXIS);
             #if DEBUG_MESH > 1
-                g_debug("MESH[%d,%d] probe[%d]=%f",x,y,probe_num,value);
+                g_debug("MESH[%d,%d] probe[%d]=%f",y,x,probe_num,value);
             #endif
             probe_values[probe_num++] = value;
     }
@@ -478,7 +484,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
         value /= ((float)m_num_probes);
 
         #if DEBUG_MESH > 1
-            g_debug("MESH[%d,%d] average=%f",x,y,value);
+            g_debug("MESH[%d,%d] average=%f",y,x,value);
         #endif
 
 		if (m_num_probes >= 3)
@@ -497,7 +503,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
             }
 
             #if DEBUG_MESH > 1
-                g_debug("MESH[%d,%d] throwing out %d:%f",x,y,max_idx,probe_values[max_idx]);
+                g_debug("MESH[%d,%d] throwing out %d:%f",y,x,max_idx,probe_values[max_idx]);
             #endif
 
             value = 0;
@@ -509,7 +515,7 @@ bool Mesh::probeOne(int x, int y, float *zResult)
             value /= ((float)m_num_probes-1);
 
             #if DEBUG_MESH
-                g_debug("MESH[%d,%d] FINAL AVERAGE=%f",x,y,value);
+                g_debug("MESH[%d,%d] FINAL AVERAGE=%f",y,x,value);
             #endif
 		}
     }
@@ -573,10 +579,10 @@ bool Mesh::doMeshLeveling()
                     }
                     else
                     {
-                        m_mesh[x][y] = value - m_zero_point;
+                        m_mesh[y * MAX_MESH_X_STEPS + x] = value - m_zero_point;
 
                         #if DEBUG_MESH > 1
-                            g_debug("MESH: m_mesh[%d,%d] <= %6.3f",x,y,m_mesh[x][y]);
+                            g_debug("MESH: m_mesh[%d,%d] <= %6.3f",y,x,m_mesh[y * MAX_MESH_X_STEPS + x]);
                         #endif
                     }
 
@@ -613,7 +619,7 @@ bool Mesh::doMeshLeveling()
 	// move to the original (given) x y position and
 	// z_pulloff above the determined position
 
-    char buf[50];
+    char buf[80];
     sprintf(buf,"g0 g53 x%5.3f y%5.3f z%5.3f",m_mesh_x,m_mesh_y,m_zero_point + _z_pulloff);
 	bool ok = _mesh_execute(buf);
 
@@ -660,7 +666,7 @@ bool readFloat(File f, float *v)
 {
     #define MAX_FLOAT  12
     int len = 0;
-    char buf[MAX_FLOAT+1];
+    char buf[MAX_FLOAT+5];
     int c = f.read();
     while (c >= 0 &&
            len < MAX_FLOAT &&
@@ -740,7 +746,7 @@ void Mesh::readMesh()
                     {
                         for (int x=0; ok && (x<_x_steps); x++)
                         {
-                            if (!readFloat(f,&m_mesh[x][y]))
+                            if (!readFloat(f,&m_mesh[y * MAX_MESH_X_STEPS + x]))
                             {
                                 ok = false;
                                 g_error("Could not read mesh value(%d,%d)",y,x);                            }
@@ -786,7 +792,7 @@ void Mesh::readMesh()
 
 bool writeFloat(File f, float v, bool newline=true, bool prec_comma=false)
 {
-    char buf[12];
+    char buf[18];
     sprintf(buf,"%-5.3f",v);
     if (prec_comma)
         if (f.print(",") != 1)
@@ -820,7 +826,7 @@ bool Mesh::writeMesh()
             {
                 for (int x=0;ok && (x<_x_steps); x++)
                 {
-                    if (!writeFloat(f,m_mesh[x][y],false,x>0))
+                    if (!writeFloat(f,m_mesh[y * MAX_MESH_X_STEPS + x],false,x>0))
                         ok = false;
                 }
                 if (f.print("\n") != 1)
