@@ -402,8 +402,8 @@ bool Mesh::zPullOff(float from) // move z upwards relative, check that probe goe
     #endif
 
     char buf[80];
-    sprintf(buf,"g1 g53 z%5.3f f%5.3f",to,_z_feed_rate);	// old: g_status.getAxisFeedRate(Z_AXIS));
-		// 	We use the slower one (feed rate is slower than seek rate) for the mesh
+    sprintf(buf,"g1 g53 z%5.3f f%5.3f",to,_xy_seek_rate);	// old: g_status.getAxisFeedRate(Z_AXIS));
+		// 	We use the xy_rate for the pulloff
 
     bool move_ok = _mesh_execute(buf);
     if (move_ok)
