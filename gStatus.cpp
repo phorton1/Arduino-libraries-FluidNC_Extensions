@@ -317,9 +317,7 @@ void gStatus::updateStatus(bool inMeshLeveling /*=false*/)
 	{
 		last_job_state = job_state;
 		m_last_alarm = static_cast<uint8_t>(rtAlarm);
-		#if 1
-			g_debug("gStatus grabbed alarm=%d",m_last_alarm);
-		#endif
+		// g_debug("gStatus grabbed alarm=%d",m_last_alarm);
 	}
 
 	// POSITIONS
