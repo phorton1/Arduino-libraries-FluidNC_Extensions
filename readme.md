@@ -1,4 +1,4 @@
-# FluidNC_extensions
+# FluidNC_Extensions
 
 This library provides a number of extensions to the
 [**FluidNC**](https://github.com/phorton1/Arduino-libraries-FluidNC) project.
@@ -263,7 +263,7 @@ Please see **YamlOverrides.h** for more information.
 ## Credits and License
 
 This library is licensed under the
-[GNU General Public License v3.0](https://github.com/phorton1/Arduino-libraries-FluidNC_extensisions/tree/master/LICENSE.TXT)
+[GNU General Public License v3.0](https://github.com/phorton1/Arduino-libraries-FluidNC_Extensions/tree/master/LICENSE.TXT)
 
 **Credits**
 
