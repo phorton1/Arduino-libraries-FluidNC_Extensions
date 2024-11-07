@@ -37,18 +37,18 @@
 #include <SPIFFS.h>
 #include <FS.h>
 
-#ifndef CNC_MACHINE
-	#define CNC_MACHINE  1
+#ifndef USE_LARGE_MESH
+	// This file, Mesh.cpp, contains the only usage of this define.
+	// The _vMachine does not use the mesh.
+	// Otherwise, all it does it define bigger default constants for
+	// the larger cnc20mm.
+	#define USE_LARGE_MESH  0
 #endif
 
-#if CNC_MACHINE==1
-	#pragma message "Mesh.cpp CNC_MACHINE defined as 1"
-#endif
-#if CNC_MACHINE==2
-	#pragma message "Mesh.cpp CNC_MACHINE defined as 2"
-#endif
-#if CNC_MACHINE==3
-	#pragma message "Mesh.cpp CNC_MACHINE defined as 3"
+#if USE_LARGE_MESH
+	#pragma message "Using Larger (cnc20mm) mesh constants"
+#else
+	#pragma message "Using Smaller (cnc3018) mesh constants"
 #endif
 
 
@@ -63,7 +63,7 @@
 #define Z_AXIS_MASK  0x04
 #define Y_AXIS_MASK  0x02
 
-#if CNC_MACHINE==3
+#if USE_LARGE_MESH
 	#define DEFAULT_MESH_HEIGHT         1100      // mm
 	#define DEFAULT_MESH_WIDTH          1100      // mm
 	#define DEFAULT_MESH_X_STEPS        9         // every 25mm
